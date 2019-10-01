@@ -1,4 +1,4 @@
-import sys, pygame
+import sys, pygame, math
 from pygame import time, display, draw, font
 from pygame.math import Vector2
 from config import *
@@ -13,19 +13,26 @@ def start():
 
     print("initializing config...")
     screen_size = (1200, 600)
-    framerate = 60
-    config = Config(screen_size, framerate)
+    framerate = 144
+    config = Config(screen_size, framerate, pygame.SCALED)
     config.clock = time.Clock()
     config.screen = display.set_mode(config.size, config.flags)
     config.font = font.SysFont("arial", 20)
 
     print("initializing road...")
-    config.road_length = 20
-    config.road_width = 1
-    config.road_true_width = int(2.2 * config.height / config.road_length)
-    config.road_true_outer_radius = int((config.height / 2) * 0.9)
-    config.road_true_inner_radius = config.road_true_outer_radius - config.road_true_width
-    config.road_true_radius = int((config.road_true_outer_radius + config.road_true_inner_radius) / 2.0)
+    # Car Units
+    config.road_length = 15.0
+    config.road_width = 0.85
+
+    outer_road_diameter_pixels = config.height * 0.8
+    road_diameter = config.road_length / math.pi
+    outer_road_diameter = road_diameter + config.road_width
+    config.cars_to_pixels = outer_road_diameter_pixels / outer_road_diameter
+    config.pixels_to_cars = 1.0 / config.cars_to_pixels
+
+    print(config.height * 0.6)
+    print(config.cars_to_pixels)
+    print((config.road_length / math.pi) * 0.5 * config.cars_to_pixels)
 
     config.speed_limit = 35
     config.coast_acceleration = -0.1
@@ -51,9 +58,13 @@ def loop(config, cars):
     check_events(config)
     config.screen.fill(WHITE)
 
-    draw.circle(config.screen, BLACK, config.center, config.road_true_outer_radius, 2)
-    draw.circle(config.screen, BLACK, config.center, config.road_true_inner_radius, 2)
-    draw.circle(config.screen, BLACK, config.center, 10)
+    road_outer_radius_pixels = int(((config.road_length / math.pi) + config.road_width) * 0.5 * config.cars_to_pixels)
+    road_inner_radius_pixels = int(((config.road_length / math.pi) - config.road_width) * 0.5 * config.cars_to_pixels)
+
+    draw.circle(config.screen, BLACK, config.center, road_outer_radius_pixels, 2)
+    draw.circle(config.screen, BLACK, config.center, road_inner_radius_pixels, 2)
+    draw.circle(config.screen, BLACK, config.center, 20, 5)
+
     for car in cars:
         car.update(config, dt, cars)
         car.draw(config)

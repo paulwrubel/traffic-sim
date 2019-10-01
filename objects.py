@@ -14,16 +14,17 @@ class Car:
         self.speed_limit_variance = speed_limit_variance
         self.speed_limit = config.speed_limit + self.speed_limit_variance
 
-        self.car_length = 1
+        self.car_length = 1.0
+        self.car_width = 0.5
 
-        self.car_true_length = config.road_true_width
-        self.car_true_width = config.road_true_width * 0.5
+        car_length_pixels = self.car_length * config.cars_to_pixels
+        car_width_pixels = self.car_width * config.cars_to_pixels
 
-        self.left_brake_light_rect = Rect((self.car_true_length * 0.9, self.car_true_width * 0.75), (self.car_true_length * 0.1, self.car_true_width * 0.25))
-        self.right_brake_light_rect = Rect((self.car_true_length * 0.9, 0), (self.car_true_length * 0.1, self.car_true_width * 0.25))
+        self.left_brake_light_rect = Rect((car_length_pixels * 0.9, car_width_pixels * 0.75), (car_length_pixels * 0.1, car_width_pixels * 0.25))
+        self.right_brake_light_rect = Rect((car_length_pixels * 0.9, 0), (car_length_pixels * 0.1, car_width_pixels * 0.25))
 
-        self.rect = Rect((0, 0), (self.car_true_length, self.car_true_width))
-        self.original_surface = pygame.Surface((config.road_true_width, config.road_true_width*0.5), pygame.SRCALPHA)
+        self.rect = Rect((0, 0), (car_length_pixels, car_width_pixels))
+        self.original_surface = pygame.Surface((car_length_pixels, car_width_pixels), pygame.SRCALPHA)
 
         self.original_surface.fill(WHITE)
         draw.rect(self.original_surface, BLACK, self.rect, 3)
@@ -36,6 +37,8 @@ class Car:
     def update(self, config, dt, cars):
         self.location += 0.0001 * self.speed * dt
         self.location %= config.road_length
+
+        self.brakes = False
 
         self.speed += 0.001 * self.acceleration * dt
 
@@ -67,8 +70,8 @@ class Car:
 
             if diff <= 0:
                 print("Car " + str(self.label) + " CRASHED into Car " + str(car_after.label))
-                car_after.speed = self.speed * 0.9
-                car_after.location += 0.0001 * car_after.speed * dt
+                car_after.speed += self.speed * 0.9
+                car_after.location += 0.0002 * car_after.speed * dt
                 self.speed = 0
 
         else:
@@ -79,20 +82,26 @@ class Car:
 
         self.update_surface(config)
 
+    # def get_acceleration(self, config):
+        
+
 
     def update_surface(self, config):
         self.affected_surface = self.original_surface.copy()
-        if self.acceleration == config.light_brakes_acceleration:
-            draw.rect(self.affected_surface, DIM_RED, self.left_brake_light_rect)
-            draw.rect(self.affected_surface, DIM_RED, self.right_brake_light_rect)
-        elif self.acceleration == config.heavy_brakes_acceleration:
+
+        if self.brakes:
             draw.rect(self.affected_surface, RED, self.left_brake_light_rect)
             draw.rect(self.affected_surface, RED, self.right_brake_light_rect)
 
         degrees_to_rotate = ((self.location / config.road_length) * 360)
+
         self.rotated_surface = transform.rotate(self.affected_surface, degrees_to_rotate)
-        x = -1.0 * config.road_true_radius * math.cos(math.radians(degrees_to_rotate-90))
-        y = config.road_true_radius * math.sin(math.radians(degrees_to_rotate-90))
+
+        road_radius_pixels = ((config.road_length / math.pi) * 0.5) * config.cars_to_pixels
+
+        x = -1.0 * road_radius_pixels * math.cos(math.radians(degrees_to_rotate-90))
+        y = road_radius_pixels * math.sin(math.radians(degrees_to_rotate-90))
+
         self.true_center = Vector2(x, y)
         self.true_rect = Vector2(x - self.rotated_surface.get_bounding_rect().width/2, y - self.rotated_surface.get_bounding_rect().height/2)
 
