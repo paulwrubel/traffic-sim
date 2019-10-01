@@ -12,13 +12,13 @@ class Car:
         self.acceleration_constant = acceleration
         self.acceleration = self.acceleration_constant
         self.speed_limit_variance = speed_limit_variance
-        self.speed_limit = config.speed_limit + self.speed_limit_variance
+        self.speed_limit = config.env["speed_limit"] + self.speed_limit_variance
 
         self.car_length = 1.0
         self.car_width = 0.5
 
-        car_length_pixels = self.car_length * config.cars_to_pixels
-        car_width_pixels = self.car_width * config.cars_to_pixels
+        car_length_pixels = self.car_length * config.env["cars_to_pixels"]
+        car_width_pixels = self.car_width * config.env["cars_to_pixels"]
 
         self.left_brake_light_rect = Rect((car_length_pixels * 0.9, car_width_pixels * 0.75), (car_length_pixels * 0.1, car_width_pixels * 0.25))
         self.right_brake_light_rect = Rect((car_length_pixels * 0.9, 0), (car_length_pixels * 0.1, car_width_pixels * 0.25))
@@ -34,21 +34,20 @@ class Car:
 
         self.affected_surface = self.original_surface.copy()
 
-    def update(self, config, dt, cars):
+    def update(self, config, dt):
         self.location += 0.0001 * self.speed * dt
-        self.location %= config.road_length
+        self.location %= config.env["road_length"]
 
         self.brakes = False
 
         self.speed += 0.001 * self.acceleration * dt
-
         if self.speed < 0:
             self.speed = 0
 
-        if len(cars) > 1:
-            car_after = cars[(cars.index(self) + 1) % len(cars)]
+        if len(config.env["cars"]) > 1:
+            car_after = config.env["cars"][(config.env["cars"].index(self) + 1) % len(config.env["cars"])]
             if car_after.location < self.location:
-                car_after_loc = car_after.location + config.road_length
+                car_after_loc = car_after.location + config.env["road_length"]
             else:
                 car_after_loc = car_after.location
 
@@ -60,13 +59,13 @@ class Car:
                 if self.speed <= self.speed_limit:
                     self.acceleration = self.acceleration_constant
                 else:
-                    self.acceleration = config.coast_acceleration
+                    self.acceleration = config.env["drag"]
             # elif diff >= dist_coefficient * 1.5:
             #     self.acceleration = config.coast_acceleration
             elif diff >= dist_coefficient * 0.8:
-                self.acceleration = config.light_brakes_acceleration
+                self.acceleration = config.env["light_brakes_acceleration"]
             else:
-                self.acceleration = config.heavy_brakes_acceleration
+                self.acceleration = config.env["heavy_brakes_acceleration"]
 
             if diff <= 0:
                 print("Car " + str(self.label) + " CRASHED into Car " + str(car_after.label))
@@ -78,7 +77,7 @@ class Car:
             if self.speed <= self.speed_limit:
                 self.acceleration = self.acceleration_constant
             else:
-                self.acceleration = config.drag
+                self.acceleration = config.env["drag"]
 
         self.update_surface(config)
 
@@ -93,11 +92,11 @@ class Car:
             draw.rect(self.affected_surface, RED, self.left_brake_light_rect)
             draw.rect(self.affected_surface, RED, self.right_brake_light_rect)
 
-        degrees_to_rotate = ((self.location / config.road_length) * 360)
+        degrees_to_rotate = ((self.location / config.env["road_length"]) * 360)
 
         self.rotated_surface = transform.rotate(self.affected_surface, degrees_to_rotate)
 
-        road_radius_pixels = ((config.road_length / math.pi) * 0.5) * config.cars_to_pixels
+        road_radius_pixels = ((config.env["road_length"] / math.pi) * 0.5) * config.env["cars_to_pixels"]
 
         x = -1.0 * road_radius_pixels * math.cos(math.radians(degrees_to_rotate-90))
         y = road_radius_pixels * math.sin(math.radians(degrees_to_rotate-90))

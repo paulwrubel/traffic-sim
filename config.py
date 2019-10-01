@@ -6,4 +6,6 @@ class Config:
         self.center = self.width / 2, self.height / 2
         self.framerate = framerate
         self.flags = flags
+
+        self.env = {}
     
